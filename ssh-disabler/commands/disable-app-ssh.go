@@ -34,7 +34,7 @@ func DisableAppsInAllOrg(cliConnection plugin.CliConnection) error {
 func DisableAppsInOneOrg(cliConnection plugin.CliConnection, orgName string) error {
 	apps, err := GetAppsInOneOrg(cliConnection, orgName)
 	if err != nil {
-		fmt.Println("exitFail to get apps in organization '" + orgName + "'")
+		return errors.New("exitFail to get apps in organization '" + orgName + "'" + err.Error())
 	}
 
 	for _, app := range apps {

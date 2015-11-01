@@ -52,23 +52,22 @@ func (c *AppLister) Run(cliConnection plugin.CliConnection, args []string) {
 
 	switch args[0] {
 	case "list-apps":
-		var err error
 		if fc.IsSet("organization") {
 			err = commands.ListAppsInOneOrg(cliConnection, fc.String("organization"))
 		} else {
 			err = commands.ListAllApps(cliConnection)
 		}
-		if err != nil {
-			exitFail(err.Error())
-		}
 	case "disable-app-ssh":
 		if fc.IsSet("organization") {
-			commands.DisableAppsInOneOrg(cliConnection, fc.String("organization"))
+			err = commands.DisableAppsInOneOrg(cliConnection, fc.String("organization"))
 		} else {
-			commands.DisableAppsInAllOrg(cliConnection)
+			err = commands.DisableAppsInAllOrg(cliConnection)
 		}
 	case "CLI-MESSAGE-UNINSTALL":
 		fmt.Println("Thank you for using this plugin")
+	}
+	if err != nil {
+		exitFail(err.Error())
 	}
 }
 
