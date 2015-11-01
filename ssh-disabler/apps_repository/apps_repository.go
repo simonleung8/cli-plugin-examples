@@ -2,10 +2,9 @@ package appsRepository
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 
 	"github.com/cloudfoundry/cli/plugin"
-	"github.com/cloudfoundry/cli/plugin/models"
 )
 
 type AppModel struct {
@@ -14,21 +13,20 @@ type AppModel struct {
 
 type EntityModel struct {
 	Name      string `json:"name"`
-	StackGuid string `json:"stack_guid"`
 	EnableSSH bool   `json:"enable_ssh"`
 }
 
-func DisableAppsSSH(cliConnection plugin.CliConnection, apps []plugin_models.GetAppsModel) error {
-	for _, app := range apps {
-		response, err := cliConnection.CliCommandWithoutTerminalOutput("curl", "v2/apps/"+app.Guid, "-X", "PUT", "-d", `{"enable_ssh":false}`)
-		if err != nil {
-			fmt.Println("Error curling v2/apps endpoint")
-		}
+func DisableAppSSH(cliConnection plugin.CliConnection, appGuid string) error {
+	response, err := cliConnection.CliCommandWithoutTerminalOutput("curl", "v2/apps/"+appGuid, "-X", "PUT", "-d", `{"enable_ssh":false}`)
+	if err != nil {
+		return errors.New("Error curling v2/apps endpoint: " + err.Error())
+	}
 
-		app := AppModel{}
-		err = json.Unmarshal([]byte(response[0]), &app)
+	app := AppModel{}
+	err = json.Unmarshal([]byte(response[0]), &app)
 
-		fmt.Println("enable_ssh", app.Entity.Name, app.Entity.EnableSSH)
+	if !app.Entity.EnableSSH {
+		return errors.New("Failed to disable SSH for application '" + app.Entity.Name + "'")
 	}
 
 	return nil

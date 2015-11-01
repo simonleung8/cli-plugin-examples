@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/cloudfoundry/cli/plugin"
-	"github.com/simonleung8/cli-plugin-examples/ssh-disabler/apps_repository"
 	"github.com/simonleung8/cli-plugin-examples/ssh-disabler/commands"
 	"github.com/simonleung8/flags"
 )
@@ -26,6 +25,9 @@ func (c *AppLister) GetMetadata() plugin.PluginMetadata {
 				HelpText: "List all apps across organizations",
 				UsageDetails: plugin.Usage{
 					Usage: "cf list-apps [-o ORG_NAME]",
+					Options: map[string]string{
+						"o": "The organization to be targeted",
+					},
 				},
 			},
 			plugin.Command{
@@ -33,6 +35,9 @@ func (c *AppLister) GetMetadata() plugin.PluginMetadata {
 				HelpText: "Disable application's ssh feature",
 				UsageDetails: plugin.Usage{
 					Usage: "cf disable-app-ssh [-o ORG_NAME]",
+					Options: map[string]string{
+						"o": "The organization to be targeted",
+					},
 				},
 			},
 		},
@@ -58,12 +63,12 @@ func (c *AppLister) Run(cliConnection plugin.CliConnection, args []string) {
 		}
 	case "disable-app-ssh":
 		if fc.IsSet("organization") {
-			disableAppsInOneOrg(cliConnection, fc.String("organization"))
+			commands.DisableAppsInOneOrg(cliConnection, fc.String("organization"))
 		} else {
-			disableAppsInAllOrg(cliConnection)
+			commands.DisableAppsInAllOrg(cliConnection)
 		}
 	case "CLI-MESSAGE-UNINSTALL":
-		return
+		fmt.Println("Thank you for using this plugin")
 	}
 }
 
@@ -73,38 +78,6 @@ func parseArguments(args []string) (flags.FlagContext, error) {
 	err := fc.Parse(args...)
 
 	return fc, err
-}
-
-func disableAppsInAllOrg(cliConnection plugin.CliConnection) {
-	orgs, err := cliConnection.GetOrgs()
-	if err != nil {
-		exitFail("Error getting list of organizations: " + err.Error())
-	}
-
-	for _, org := range orgs {
-		apps, err := commands.GetAppsInOneOrg(cliConnection, org.Name)
-		if err != nil {
-			fmt.Println("exitFail to get apps in organization '" + org.Name + "'")
-			continue
-		}
-
-		err = appsRepository.DisableAppsSSH(cliConnection, apps)
-		if err != nil {
-			exitFail(err.Error())
-		}
-	}
-}
-
-func disableAppsInOneOrg(cliConnection plugin.CliConnection, orgName string) {
-	apps, err := commands.GetAppsInOneOrg(cliConnection, orgName)
-	if err != nil {
-		fmt.Println("exitFail to get apps in organization '" + orgName + "'")
-	}
-
-	err = appsRepository.DisableAppsSSH(cliConnection, apps)
-	if err != nil {
-		exitFail(err.Error())
-	}
 }
 
 func exitFail(err string) {
