@@ -1,13 +1,12 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
 	"github.com/cloudfoundry/cli/plugin"
-	"github.com/cloudfoundry/cli/plugin/models"
 	"github.com/simonleung8/cli-plugin-examples/ssh-disabler/apps_repository"
+	"github.com/simonleung8/cli-plugin-examples/ssh-disabler/commands"
 	"github.com/simonleung8/flags"
 )
 
@@ -43,20 +42,19 @@ func (c *AppLister) GetMetadata() plugin.PluginMetadata {
 func (c *AppLister) Run(cliConnection plugin.CliConnection, args []string) {
 	fc, err := parseArguments(args)
 	if err != nil {
-		failed("Invalid flag provided: " + err.Error())
+		exitFail("Invalid flag provided: " + err.Error())
 	}
 
 	switch args[0] {
 	case "list-apps":
+		var err error
 		if fc.IsSet("organization") {
-			orgName := fc.String("organization")
-			apps, err := getAppsInOrg(cliConnection, orgName)
-			if err != nil {
-				failed("Error getting list of organizations: " + err.Error())
-			}
-			printAppsName(orgName, apps)
+			err = commands.ListAppsInOneOrg(cliConnection, fc.String("organization"))
 		} else {
-			listAllApps(cliConnection)
+			err = commands.ListAllApps(cliConnection)
+		}
+		if err != nil {
+			exitFail(err.Error())
 		}
 	case "disable-app-ssh":
 		if fc.IsSet("organization") {
@@ -77,76 +75,39 @@ func parseArguments(args []string) (flags.FlagContext, error) {
 	return fc, err
 }
 
-func listAllApps(cliConnection plugin.CliConnection) {
-	orgs, err := cliConnection.GetOrgs()
-	if err != nil {
-		failed("Error getting list of organizations: " + err.Error())
-	}
-
-	for _, org := range orgs {
-		apps, err := getAppsInOrg(cliConnection, org.Name)
-		if err != nil {
-			fmt.Println("Failed to get apps in organization '" + org.Name + "'")
-			continue
-		}
-
-		printAppsName(org.Name, apps)
-	}
-}
-
 func disableAppsInAllOrg(cliConnection plugin.CliConnection) {
 	orgs, err := cliConnection.GetOrgs()
 	if err != nil {
-		failed("Error getting list of organizations: " + err.Error())
+		exitFail("Error getting list of organizations: " + err.Error())
 	}
 
 	for _, org := range orgs {
-		apps, err := getAppsInOrg(cliConnection, org.Name)
+		apps, err := commands.GetAppsInOneOrg(cliConnection, org.Name)
 		if err != nil {
-			fmt.Println("Failed to get apps in organization '" + org.Name + "'")
+			fmt.Println("exitFail to get apps in organization '" + org.Name + "'")
 			continue
 		}
 
 		err = appsRepository.DisableAppsSSH(cliConnection, apps)
 		if err != nil {
-			//do something here
+			exitFail(err.Error())
 		}
 	}
 }
 
 func disableAppsInOneOrg(cliConnection plugin.CliConnection, orgName string) {
-	apps, err := getAppsInOrg(cliConnection, orgName)
+	apps, err := commands.GetAppsInOneOrg(cliConnection, orgName)
 	if err != nil {
-		fmt.Println("Failed to get apps in organization '" + orgName + "'")
+		fmt.Println("exitFail to get apps in organization '" + orgName + "'")
 	}
 
 	err = appsRepository.DisableAppsSSH(cliConnection, apps)
 	if err != nil {
-		//do something here
+		exitFail(err.Error())
 	}
 }
 
-func getAppsInOrg(cliConnection plugin.CliConnection, orgName string) ([]plugin_models.GetAppsModel, error) {
-	_, err := cliConnection.CliCommandWithoutTerminalOutput("target", "-o", orgName)
-	if err != nil {
-		return []plugin_models.GetAppsModel{}, errors.New("Failed to target org '" + orgName + "'")
-	}
-
-	apps, err := cliConnection.GetApps()
-	if err != nil {
-		return []plugin_models.GetAppsModel{}, errors.New("Failed to get apps in organization '" + orgName + "'")
-	}
-
-	return apps, nil
-}
-
-func printAppsName(orgName string, apps []plugin_models.GetAppsModel) {
-	for _, app := range apps {
-		fmt.Println(orgName, ":", app.Name)
-	}
-}
-
-func failed(err string) {
-	fmt.Println("FAILED\n", err)
+func exitFail(err string) {
+	fmt.Println("exitFail\n", err)
 	os.Exit(1)
 }
