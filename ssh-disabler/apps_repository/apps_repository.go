@@ -27,7 +27,7 @@ func DisableAppSSH(cliConnection plugin.CliConnection, appGuid string) error {
 	app := AppModel{}
 	err = json.Unmarshal([]byte(response[0]), &app)
 
-	if !app.Entity.EnableSSH {
+	if app.Entity.EnableSSH {
 		return errors.New("Failed to disable SSH for '" + app.Entity.Name + "'")
 	}
 
